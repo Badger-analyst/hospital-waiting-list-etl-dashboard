@@ -62,12 +62,32 @@ charts in the screenshots.
 
 ## Building `Time_Bands_Midpoint` (needed for the wait-time measures)
 
-`Time_Bands` is categorical ("0-3 Months", "3-6 Months", ...), so computing a
-numeric average/median wait requires a bridge table assigning each band a
-midpoint in months. Modeling → New Table:
+`Time_Bands` is categorical, so computing a numeric average/median wait
+requires a bridge table assigning each band a midpoint in months. **Which
+table you need depends on which era of NTPF file you loaded** — see
+`docs/data_dictionary.md` for why the band widths differ:
+
+Current "by Speciality" open data (2021+) and the sample data shipped in
+this repo use 4 bands:
 
 ```
 Time_Bands_Midpoint = DATATABLE(
+    "Time_Bands", STRING, "Midpoint_Months", DOUBLE,
+    {
+        {"0-6 Months",   3.0},
+        {"6-12 Months",  9.0},
+        {"12-18 Months", 15.0},
+        {"18+ Months",   24.0}
+    }
+)
+```
+
+Older long-format exports (2014-2020, matching the `IN_WL 2018`-style file)
+use 7 finer bands instead:
+
+```
+Time_Bands_Midpoint =
+DATATABLE(
     "Time_Bands", STRING, "Midpoint_Months", DOUBLE,
     {
         {"0-3 Months",   1.5},
@@ -83,6 +103,8 @@ Time_Bands_Midpoint = DATATABLE(
 
 Relate `Time_Bands_Midpoint[Time_Bands]` **(1)** → `All_Data[Time_Bands]` **(\*)**.
 
-> Adjust the band labels/midpoints to match whatever `Time_Bands` values
-> actually appear in the CSVs you loaded — NTPF has used slightly different
-> band widths across different years.
+> Check `All_Data[Time_Bands].unique()` after loading your own downloaded
+> files before picking a table — don't assume one without checking, since
+> mixing years without normalising will silently blend both shapes in Power
+> Query if you're not careful (the Python ETL's `transform_file()` already
+> normalises this — see its docstring).
